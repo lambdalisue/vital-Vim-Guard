@@ -61,6 +61,10 @@ function! s:_new_variable(name, ...) abort " {{{
   let variable = copy(s:variable)
   let variable.name = name
   let variable.value = get(namespace, name, s:UNDEFINED)
+  let variable.value =
+        \ type(variable.value) == type({}) || type(variable.value) == type([])
+        \   ? deepcopy(variable.value)
+        \   : variable.value
   let variable._namespace = namespace
   lockvar variable.name
   lockvar variable.value

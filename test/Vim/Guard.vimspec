@@ -193,7 +193,6 @@ Describe Vim.Guard
     End
     Context A variable instance
       It restore a value of the variable when assigned
-
         let variable = sf._new_variable('b:VitalVimGuardTest')
         let previous = b:VitalVimGuardTest
         let b:VitalVimGuardTest = 2
@@ -231,6 +230,29 @@ Describe Vim.Guard
         call variable.restore()
         let s = s:VitalVimGuardTest
         Assert Equals(s, previous)
+      End
+      It deepcopy List or Dictionary to prevent E741: Value is locked
+        let namespace = {
+              \ 'list': ['a', 'b', 'c'],
+              \ 'dict': {
+              \   'a': 'a',
+              \   'b': 'b',
+              \   'c': 'c',
+              \ },
+              \}
+        let variable = sf._new_variable('list', namespace)
+        let namespace.list = ['foo', 'bar', 'hoge']
+        call variable.restore()
+        Assert Equals(namespace.list, ['a', 'b', 'c'])
+
+        let variable = sf._new_variable('dict', namespace)
+        let namespace.dict = { 'foo': 'foo', 'bar': 'bar' }
+        call variable.restore()
+        Assert Equals(namespace.dict, {
+              \ 'a': 'a',
+              \ 'b': 'b',
+              \ 'c': 'c',
+              \})
       End
     End
   End
