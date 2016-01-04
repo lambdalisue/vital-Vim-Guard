@@ -25,7 +25,42 @@ And call the following to bundle this plugin
 Usage
 -------------------------------------------------------------------------------
 
-WIP
+Specify options/variables to `Vital.Vim.Guard.store()` and restore previous
+values with `Vital.Vim.Guard-instance.restore()` like:
+
+```vim
+let s:G = s:V.import('Vim.Guard')
+let g:foo = 'foo'
+
+function! s:foobar() abort
+  let foo = 'foo'
+
+  " Guard options/variables
+  let guard = s:G.store(
+    \ '&backup',
+    \ 'g:foo',
+    \ ['foo', l:],
+    \)
+
+  " Assign temporary values
+  set nobackup
+  unlet g:foo
+  let g:foo = 1
+  unlet foo
+  let foo = []
+
+  " restore previous values
+  call guard.restore()
+
+  " Check if the value is restored
+  echo &backup
+  " => 1
+  echo g:foo
+  " => 'foo'
+  echo foo
+  " => foo
+endfunction
+```
 
 License
 -------------------------------------------------------------------------------
