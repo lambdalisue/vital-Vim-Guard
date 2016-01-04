@@ -10,7 +10,7 @@ Describe Vim.Guard
           \)
     let sf = s:S.sfuncs(sfile)
   End
-  Context [PRIVATE] s:_new_option({name})
+  Describe [PRIVATE] s:_new_option({name})
     " NOTE:
     "   backup      - glocal
     "   backupcopy  - global or local to buffer
@@ -31,10 +31,8 @@ Describe Vim.Guard
       Assert KeyExists(option, 'restore')
       Assert Equals(option.name, '&backup')
       Assert Equals(option.value, &backup)
-      Throw /E741: Value is locked/ :let option.name = 'hello'
-      Throw /E741: Value is locked/ :let option.value = 'hello'
     End
-    Context An option instance
+    Describe An option instance
       Before
         let previous_backup = &backup
         let previous_g_backupcopy = &g:backupcopy
@@ -66,7 +64,7 @@ Describe Vim.Guard
         setl backupcopy=no
         call option.restore()
         Assert Equals(&g:backupcopy, 'yes')
-        Assert Equals(&l:backupcopy, '')
+        Assert Equals(&l:backupcopy, v:version >= 704 ? '' : 'yes')
       End
       It restore a value of the option when assigned [global-local with &g:]
         let option = sf._new_option('&g:backupcopy')
@@ -74,14 +72,14 @@ Describe Vim.Guard
         setl backupcopy=no
         call option.restore()
         Assert Equals(&g:backupcopy, 'yes')
-        Assert Equals(&l:backupcopy, 'no')
+        Assert Equals(&l:backupcopy, v:version >= 704 ? 'no' : 'yes')
       End
       It restore a value of the option when assigned [global-local with &l:]
         let option = sf._new_option('&l:backupcopy')
         setg backupcopy=no
         setl backupcopy=no
         call option.restore()
-        Assert Equals(&g:backupcopy, 'no')
+        Assert Equals(&g:backupcopy, v:version >= 704 ? 'no' : 'yes')
         Assert Equals(&l:backupcopy, 'yes')
       End
       It restore a value of the option when assigned [local to buffer]
@@ -98,7 +96,7 @@ Describe Vim.Guard
       End
     End
   End
-  Context [PRIVATE] s:_new_variable({name}[, {namespace}])
+  Describe [PRIVATE] s:_new_variable({name}[, {namespace}])
     Before
       let g:VitalVimGuardTest = 1
       let b:VitalVimGuardTest = 1
@@ -131,18 +129,16 @@ Describe Vim.Guard
       Assert KeyExists(variable, 'restore')
       Assert Equals(variable.name, 'foo')
       Assert Equals(variable.value, namespace.foo)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
 
-      let VitalVimGuardTest = 1
-      let variable = sf._new_variable('VitalVimGuardTest', l:)
-      Assert KeyExists(variable, 'name')
-      Assert KeyExists(variable, 'value')
-      Assert KeyExists(variable, 'restore')
-      Assert Equals(variable.name, 'VitalVimGuardTest')
-      Assert Equals(variable.value, VitalVimGuardTest)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
+      if Guard.is_local_variable_supported
+        let VitalVimGuardTest = 1
+        let variable = sf._new_variable('VitalVimGuardTest', l:)
+        Assert KeyExists(variable, 'name')
+        Assert KeyExists(variable, 'value')
+        Assert KeyExists(variable, 'restore')
+        Assert Equals(variable.name, 'VitalVimGuardTest')
+        Assert Equals(variable.value, VitalVimGuardTest)
+      endif
 
       let variable = sf._new_variable('VitalVimGuardTest', s:)
       Assert KeyExists(variable, 'name')
@@ -151,8 +147,6 @@ Describe Vim.Guard
       Assert Equals(variable.name, 'VitalVimGuardTest')
       let s = s:VitalVimGuardTest
       Assert Equals(variable.value, s)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
     End
     It returns an variable instance of {name} in a {namespace} specified as a prefix of {name}
       let variable = sf._new_variable('b:VitalVimGuardTest')
@@ -161,8 +155,6 @@ Describe Vim.Guard
       Assert KeyExists(variable, 'restore')
       Assert Equals(variable.name, 'VitalVimGuardTest')
       Assert Equals(variable.value, b:VitalVimGuardTest)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
 
       let variable = sf._new_variable('w:VitalVimGuardTest')
       Assert KeyExists(variable, 'name')
@@ -170,8 +162,6 @@ Describe Vim.Guard
       Assert KeyExists(variable, 'restore')
       Assert Equals(variable.name, 'VitalVimGuardTest')
       Assert Equals(variable.value, w:VitalVimGuardTest)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
 
       let variable = sf._new_variable('t:VitalVimGuardTest')
       Assert KeyExists(variable, 'name')
@@ -179,8 +169,6 @@ Describe Vim.Guard
       Assert KeyExists(variable, 'restore')
       Assert Equals(variable.name, 'VitalVimGuardTest')
       Assert Equals(variable.value, t:VitalVimGuardTest)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
 
       let variable = sf._new_variable('g:VitalVimGuardTest')
       Assert KeyExists(variable, 'name')
@@ -188,10 +176,8 @@ Describe Vim.Guard
       Assert KeyExists(variable, 'restore')
       Assert Equals(variable.name, 'VitalVimGuardTest')
       Assert Equals(variable.value, g:VitalVimGuardTest)
-      Throw /E741: Value is locked/ :let variable.name = 'hello'
-      Throw /E741: Value is locked/ :let variable.value = 'hello'
     End
-    Context A variable instance
+    Describe A variable instance
       It restore a value of the variable when assigned
         let variable = sf._new_variable('b:VitalVimGuardTest')
         let previous = b:VitalVimGuardTest
@@ -217,12 +203,14 @@ Describe Vim.Guard
         call variable.restore()
         Assert Equals(g:VitalVimGuardTest, previous)
 
-        let VitalVimGuardTest = 1
-        let variable = sf._new_variable('VitalVimGuardTest', l:)
-        let previous = VitalVimGuardTest
-        let VitalVimGuardTest = 2
-        call variable.restore()
-        Assert Equals(VitalVimGuardTest, previous)
+        if Guard.is_local_variable_supported
+          let VitalVimGuardTest = 1
+          let variable = sf._new_variable('VitalVimGuardTest', l:)
+          let previous = VitalVimGuardTest
+          let VitalVimGuardTest = 2
+          call variable.restore()
+          Assert Equals(VitalVimGuardTest, previous)
+        endif
 
         let variable = sf._new_variable('VitalVimGuardTest', s:)
         let previous = s:VitalVimGuardTest
@@ -231,7 +219,7 @@ Describe Vim.Guard
         let s = s:VitalVimGuardTest
         Assert Equals(s, previous)
       End
-      It deepcopy List or Dictionary to prevent E741: Value is locked
+      It deepcopy List or Dictionary
         let namespace = {
               \ 'list': ['a', 'b', 'c'],
               \ 'dict': {
@@ -257,7 +245,7 @@ Describe Vim.Guard
     End
   End
 
-  Context .new({option_or_variable}...)
+  Describe .store({option_or_variable}...)
     Before
       let previous_backup = &backup
       let previous_g_backupcopy = &g:backupcopy
@@ -288,7 +276,7 @@ Describe Vim.Guard
       unlet s:VitalVimGuardTest
     End
     It returns a guard instance for options
-      let guard = Guard.new(
+      let guard = Guard.store(
             \ '&backup',
             \ '&backupcopy',
             \ '&binary',
@@ -296,7 +284,7 @@ Describe Vim.Guard
             \)
       Assert KeyExists(guard, 'restore')
       " NOTE: first character & of names are omittable
-      let guard = Guard.new(
+      let guard = Guard.store(
             \ 'backup',
             \ 'backupcopy',
             \ 'binary',
@@ -306,34 +294,30 @@ Describe Vim.Guard
     End
     It returns a guard instance for variables
       let namespace = { 'VitalVimGuardTest': 1 }
-      let VitalVimGuardTest = 1
-      let guard = Guard.new(
+      let guard = Guard.store(
             \ ['VitalVimGuardTest', b:],
             \ ['VitalVimGuardTest', w:],
             \ ['VitalVimGuardTest', t:],
             \ ['VitalVimGuardTest', g:],
             \ ['VitalVimGuardTest', s:],
-            \ ['VitalVimGuardTest', l:],
             \ ['VitalVimGuardTest', namespace],
             \)
       Assert KeyExists(guard, 'restore')
       " NOTE: namespace variables of b:, w:, t:, g: are omittable
-      let guard = Guard.new(
+      let guard = Guard.store(
             \ 'b:VitalVimGuardTest',
             \ 'w:VitalVimGuardTest',
             \ 't:VitalVimGuardTest',
             \ 'g:VitalVimGuardTest',
             \ ['VitalVimGuardTest', s:],
-            \ ['VitalVimGuardTest', l:],
             \ ['VitalVimGuardTest', namespace],
             \)
       Assert KeyExists(guard, 'restore')
     End
-    Context A guard instance
+    Describe A guard instance
       It restore options and variables assigned
         let namespace = { 'VitalVimGuardTest': 1 }
-        let VitalVimGuardTest = 1
-        let guard = Guard.new(
+        let guard = Guard.store(
               \ 'backup',
               \ 'backupcopy',
               \ 'binary',
@@ -343,7 +327,6 @@ Describe Vim.Guard
               \ 't:VitalVimGuardTest',
               \ 'g:VitalVimGuardTest',
               \ ['VitalVimGuardTest', s:],
-              \ ['VitalVimGuardTest', l:],
               \ ['VitalVimGuardTest', namespace],
               \)
         set nobackup
@@ -354,7 +337,6 @@ Describe Vim.Guard
         let w:VitalVimGuardTest = 2
         let t:VitalVimGuardTest = 2
         let g:VitalVimGuardTest = 2
-        let VitalVimGuardTest = 2
         let s:VitalVimGuardTest = 2
         let namespace.VitalVimGuardTest = 2
         call guard.restore()
@@ -366,7 +348,6 @@ Describe Vim.Guard
         Assert Equals(w:VitalVimGuardTest, 1)
         Assert Equals(t:VitalVimGuardTest, 1)
         Assert Equals(g:VitalVimGuardTest, 1)
-        Assert Equals(VitalVimGuardTest, 1)
         let s = s:VitalVimGuardTest
         Assert Equals(s, 1)
         Assert Equals(namespace.VitalVimGuardTest, 1)
